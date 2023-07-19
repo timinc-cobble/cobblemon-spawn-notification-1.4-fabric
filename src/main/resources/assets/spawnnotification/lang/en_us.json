@@ -1,0 +1,5 @@
+{
+  "spawnnotification.notification.both": "Shiny Legendary %d spawned at %d, %d, %d!",
+  "spawnnotification.notification.shiny": "Shiny %d spawned at %d, %d, %d!",
+  "spawnnotification.notification.legendary": "Legendary %d spawned at %d, %d, %d!"
+}
