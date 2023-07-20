@@ -12,4 +12,6 @@ class SpawnNotificationConfig : ConfigData {
     val broadcastShiny = true
     @Comment("Whether or not to broadcast the location of spawns")
     val broadcastCoords = true
+    @Comment("Whether or not to play the PLA shiny sound when a shiny spawns")
+    val playShinySound = true
 }
