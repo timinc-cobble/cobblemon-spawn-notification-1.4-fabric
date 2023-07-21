@@ -48,22 +48,24 @@ object SpawnNotification : ModInitializer {
         val pokemon = pokemonEntity.pokemon
         if (pokemon.isPlayerOwned()) return
 
+        broadcastSpawn(cachedConfig, pokemonEntity, level)
+        playShinySound(cachedConfig, pokemonEntity, level)
+    }
+
+    private fun broadcastSpawn(config : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel) {
+        val pokemon = pokemonEntity.pokemon
         val pokemonName = pokemon.displayName
         val pos = pokemonEntity.blockPosition()
 
         val message = when {
-            cachedConfig.broadcastLegendary && cachedConfig.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "spawnnotification.notification.both"
-            cachedConfig.broadcastLegendary && pokemon.isLegendary() -> "spawnnotification.notification.legendary"
-            cachedConfig.broadcastShiny && pokemon.shiny -> "spawnnotification.notification.shiny"
+            config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "spawnnotification.notification.both"
+            config.broadcastLegendary && pokemon.isLegendary() -> "spawnnotification.notification.legendary"
+            config.broadcastShiny && pokemon.shiny -> "spawnnotification.notification.shiny"
             else -> return
         }
 
-        if (cachedConfig.playShinySound && pokemon.shiny) {
-            level.playSoundServer(pokemonEntity.eyePosition, SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
-        }
-
         var messageComponent = Component.translatable(message, pokemonName)
-        if (cachedConfig.broadcastCoords) {
+        if (config.broadcastCoords) {
             messageComponent = messageComponent.append(Component.translatable("spawnnotification.notification.coords", pos.x, pos.y, pos.z))
         }
 
@@ -72,4 +74,11 @@ object SpawnNotification : ModInitializer {
         }
     }
 
+    private fun playShinySound(cachedConfig : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel) {
+        val pokemon = pokemonEntity.pokemon
+
+        if (cachedConfig.playShinySound && pokemon.shiny) {
+            level.playSoundServer(pokemonEntity.eyePosition, SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
+        }
+    }
 }
