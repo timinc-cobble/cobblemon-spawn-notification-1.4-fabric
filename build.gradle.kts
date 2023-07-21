@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "us.timinc.mc.cobblemon.spawnnotification"
-version = "1.1.1"
+version = "1.1.2"
 
 architectury {
     platformSetupLoomIde()
