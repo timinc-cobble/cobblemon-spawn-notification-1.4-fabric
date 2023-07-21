@@ -62,13 +62,14 @@ object SpawnNotification : ModInitializer {
             level.playSoundServer(pokemonEntity.eyePosition, SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
         }
 
-        level.players().forEach { player ->
-            player.sendSystemMessage(Component.translatable(message, pokemonName))
-            if (cachedConfig.broadcastCoords) {
-                player.sendSystemMessage(Component.literal("${pos.x}, ${pos.y}, ${pos.z}s"))
-            }
+        var messageComponent = Component.translatable(message, pokemonName)
+        if (cachedConfig.broadcastCoords) {
+            messageComponent = messageComponent.append(Component.translatable("spawnnotification.notification.coords", pos.x, pos.y, pos.z))
         }
 
+        level.players().forEach { player ->
+            player.sendSystemMessage(messageComponent)
+        }
     }
 
 }
