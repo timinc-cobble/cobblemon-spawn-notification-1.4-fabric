@@ -18,13 +18,16 @@ import net.minecraft.world.phys.Vec3
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
     private var config: SpawnNotificationConfig? = null
+
     @JvmStatic
     var SHINY_SOUND_ID: ResourceLocation = ResourceLocation("spawnnotification:pla_shiny")
+
     @JvmStatic
     var SHINY_SOUND_EVENT: SoundEvent = SoundEvent(SHINY_SOUND_ID)
 
     override fun onInitialize() {
-        AutoConfig.register(SpawnNotificationConfig::class.java
+        AutoConfig.register(
+            SpawnNotificationConfig::class.java
         ) { definition: Config?, configClass: Class<SpawnNotificationConfig?>? ->
             JanksonConfigSerializer(
                 definition,
@@ -47,7 +50,12 @@ object SpawnNotification : ModInitializer {
         playShinySound(cachedConfig, pokemonEntity, level, blockPos)
     }
 
-    private fun broadcastSpawn(config : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel, pos: BlockPos) {
+    private fun broadcastSpawn(
+        config: SpawnNotificationConfig,
+        pokemonEntity: PokemonEntity,
+        level: ServerLevel,
+        pos: BlockPos
+    ) {
         val pokemon = pokemonEntity.pokemon
         val pokemonName = pokemon.displayName
 
@@ -60,7 +68,26 @@ object SpawnNotification : ModInitializer {
 
         var messageComponent = Component.translatable(message, pokemonName)
         if (config.broadcastCoords) {
-            messageComponent = messageComponent.append(Component.translatable("spawnnotification.notification.coords", pos.x, pos.y, pos.z))
+            messageComponent = messageComponent.append(
+                Component.translatable(
+                    "spawnnotification.notification.coords",
+                    pos.x,
+                    pos.y,
+                    pos.z
+                )
+            )
+        }
+        if (config.broadcastBiome) {
+            val biomeHolder = level.getBiome(pos)
+            val biomeBaseKey =
+                "biome." + level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).getKey(biomeHolder.value())
+                    ?.toLanguageKey()
+            messageComponent = messageComponent.append(
+                Component.translatable(
+                    "spawnnotification.notification.biome",
+                    Component.translatable(biomeBaseKey)
+                )
+            )
         }
 
         level.players().forEach { player ->
@@ -68,7 +95,12 @@ object SpawnNotification : ModInitializer {
         }
     }
 
-    private fun playShinySound(cachedConfig : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel, blockPos: BlockPos) {
+    private fun playShinySound(
+        cachedConfig: SpawnNotificationConfig,
+        pokemonEntity: PokemonEntity,
+        level: ServerLevel,
+        blockPos: BlockPos
+    ) {
         val pokemon = pokemonEntity.pokemon
 
         if (cachedConfig.playShinySound && pokemon.shiny) {
