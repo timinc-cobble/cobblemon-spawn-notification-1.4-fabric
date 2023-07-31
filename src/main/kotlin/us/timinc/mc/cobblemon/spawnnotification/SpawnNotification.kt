@@ -1,6 +1,5 @@
 package us.timinc.mc.cobblemon.spawnnotification
 
-import com.cobblemon.mod.common.api.events.CobblemonEvents
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.util.playSoundServer
 import me.shedaniel.autoconfig.AutoConfig
