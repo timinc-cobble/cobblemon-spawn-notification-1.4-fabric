@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "package": "us.timinc.mc.cobblemon.spawnnotification.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "PokemonSpawnActionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

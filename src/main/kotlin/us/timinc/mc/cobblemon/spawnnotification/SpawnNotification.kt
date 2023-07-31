@@ -1,23 +1,27 @@
 package us.timinc.mc.cobblemon.spawnnotification
 
+import com.cobblemon.mod.common.api.events.CobblemonEvents
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.util.playSoundServer
 import me.shedaniel.autoconfig.AutoConfig
 import me.shedaniel.autoconfig.annotation.Config
 import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer
 import net.fabricmc.api.ModInitializer
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
+import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
+import net.minecraft.world.phys.Vec3
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
     private var config: SpawnNotificationConfig? = null
+    @JvmStatic
     var SHINY_SOUND_ID: ResourceLocation = ResourceLocation("spawnnotification:pla_shiny")
+    @JvmStatic
     var SHINY_SOUND_EVENT: SoundEvent = SoundEvent(SHINY_SOUND_ID)
 
     override fun onInitialize() {
@@ -32,30 +36,21 @@ object SpawnNotification : ModInitializer {
             .config
 
         Registry.register(Registry.SOUND_EVENT, SHINY_SOUND_ID, SHINY_SOUND_EVENT)
-
-        ServerEntityEvents.ENTITY_LOAD.register { entity, world ->
-            if (entity !is PokemonEntity || entity.pokemon.isPlayerOwned()) {
-                return@register
-            }
-
-            possiblyBroadcastSpawn(entity, world)
-        }
     }
 
-    private fun possiblyBroadcastSpawn(pokemonEntity: PokemonEntity, level: ServerLevel) {
+    fun possiblyBroadcastSpawn(pokemonEntity: PokemonEntity, level: ServerLevel, blockPos: BlockPos) {
         val cachedConfig = config ?: return
 
         val pokemon = pokemonEntity.pokemon
         if (pokemon.isPlayerOwned()) return
 
-        broadcastSpawn(cachedConfig, pokemonEntity, level)
-        playShinySound(cachedConfig, pokemonEntity, level)
+        broadcastSpawn(cachedConfig, pokemonEntity, level, blockPos)
+        playShinySound(cachedConfig, pokemonEntity, level, blockPos)
     }
 
-    private fun broadcastSpawn(config : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel) {
+    private fun broadcastSpawn(config : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel, pos: BlockPos) {
         val pokemon = pokemonEntity.pokemon
         val pokemonName = pokemon.displayName
-        val pos = pokemonEntity.blockPosition()
 
         val message = when {
             config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "spawnnotification.notification.both"
@@ -74,11 +69,11 @@ object SpawnNotification : ModInitializer {
         }
     }
 
-    private fun playShinySound(cachedConfig : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel) {
+    private fun playShinySound(cachedConfig : SpawnNotificationConfig, pokemonEntity : PokemonEntity, level : ServerLevel, blockPos: BlockPos) {
         val pokemon = pokemonEntity.pokemon
 
         if (cachedConfig.playShinySound && pokemon.shiny) {
-            level.playSoundServer(pokemonEntity.eyePosition, SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
+            level.playSoundServer(Vec3.atCenterOf(blockPos), SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
         }
     }
 }
