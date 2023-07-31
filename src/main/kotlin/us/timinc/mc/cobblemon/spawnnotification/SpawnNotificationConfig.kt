@@ -10,8 +10,10 @@ class SpawnNotificationConfig : ConfigData {
     val broadcastLegendary = true
     @Comment("Whether or not to send a chat message for shiny spawns")
     val broadcastShiny = true
-    @Comment("Whether or not to broadcast the location of spawns")
+    @Comment("Whether or not to broadcast the coords")
     val broadcastCoords = true
+    @Comment("Whether or not to broadcast the biome")
+    val broadcastBiome = false
     @Comment("Whether or not to play the PLA shiny sound when a shiny spawns")
     val playShinySound = true
 }
