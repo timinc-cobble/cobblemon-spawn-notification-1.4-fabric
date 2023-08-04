@@ -95,6 +95,18 @@ object SpawnNotification : ModInitializer {
         }
     }
 
+    fun possiblyPlayShinySound(
+        pokemonEntity: PokemonEntity,
+        level: ServerLevel,
+        blockPos: BlockPos
+    ) {
+        val cachedConfig = config ?: return
+        if (!pokemonEntity.pokemon.shiny) {
+            return
+        }
+        playShinySound(cachedConfig, pokemonEntity, level, blockPos)
+    }
+
     private fun playShinySound(
         cachedConfig: SpawnNotificationConfig,
         pokemonEntity: PokemonEntity,
