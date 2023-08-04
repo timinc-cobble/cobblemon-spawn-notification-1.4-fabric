@@ -14,10 +14,11 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.phys.Vec3
+import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
-    private var config: SpawnNotificationConfig? = null
+    private lateinit var config: SpawnNotificationConfig
 
     @JvmStatic
     var SHINY_SOUND_ID: ResourceLocation = ResourceLocation("spawnnotification:pla_shiny")
@@ -41,13 +42,11 @@ object SpawnNotification : ModInitializer {
     }
 
     fun possiblyBroadcastSpawn(pokemonEntity: PokemonEntity, level: ServerLevel, blockPos: BlockPos) {
-        val cachedConfig = config ?: return
-
         val pokemon = pokemonEntity.pokemon
         if (pokemon.isPlayerOwned()) return
 
-        broadcastSpawn(cachedConfig, pokemonEntity, level, blockPos)
-        playShinySound(cachedConfig, pokemonEntity, level, blockPos)
+        broadcastSpawn(config, pokemonEntity, level, blockPos)
+        playShinySound(config, pokemonEntity, level, blockPos)
     }
 
     private fun broadcastSpawn(
@@ -93,6 +92,17 @@ object SpawnNotification : ModInitializer {
         level.players().forEach { player ->
             player.sendSystemMessage(messageComponent)
         }
+    }
+
+    fun possiblyPlayShinySound(
+        pokemonEntity: PokemonEntity,
+        level: ServerLevel,
+        blockPos: BlockPos
+    ) {
+        if (!config.playShinySoundPlayer || !pokemonEntity.pokemon.shiny) {
+            return
+        }
+        playShinySound(config, pokemonEntity, level, blockPos)
     }
 
     private fun playShinySound(
