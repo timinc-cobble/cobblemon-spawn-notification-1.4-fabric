@@ -1,19 +1,17 @@
 package us.timinc.mc.cobblemon.spawnnotification
 
+import com.cobblemon.mod.common.api.events.CobblemonEvents
+import com.cobblemon.mod.common.api.events.entity.SpawnEvent
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
+import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
-import me.shedaniel.autoconfig.AutoConfig
-import me.shedaniel.autoconfig.annotation.Config
-import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer
 import net.fabricmc.api.ModInitializer
-import net.minecraft.core.BlockPos
-import net.minecraft.core.Registry
-import net.minecraft.network.chat.Component
-import net.minecraft.resources.ResourceLocation
-import net.minecraft.server.level.ServerLevel
-import net.minecraft.sounds.SoundEvent
-import net.minecraft.sounds.SoundSource
-import net.minecraft.world.phys.Vec3
+import net.minecraft.sound.SoundCategory
+import net.minecraft.sound.SoundEvent
+import net.minecraft.text.Text
+import net.minecraft.util.Identifier
+import net.minecraft.util.math.BlockPos
+import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 
 object SpawnNotification : ModInitializer {
@@ -21,42 +19,33 @@ object SpawnNotification : ModInitializer {
     private lateinit var config: SpawnNotificationConfig
 
     @JvmStatic
-    var SHINY_SOUND_ID: ResourceLocation = ResourceLocation("spawnnotification:pla_shiny")
+    var SHINY_SOUND_ID: Identifier = Identifier("$MOD_ID:pla_shiny")
 
     @JvmStatic
-    var SHINY_SOUND_EVENT: SoundEvent = SoundEvent(SHINY_SOUND_ID)
+    var SHINY_SOUND_EVENT: SoundEvent = SoundEvent.of(SHINY_SOUND_ID)
 
     override fun onInitialize() {
-        AutoConfig.register(
-            SpawnNotificationConfig::class.java
-        ) { definition: Config?, configClass: Class<SpawnNotificationConfig?>? ->
-            JanksonConfigSerializer(
-                definition,
-                configClass
-            )
+        config = SpawnNotificationConfig.Builder.load()
+
+        CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe { evt ->
+            val pokemon = evt.entity.pokemon
+            if (pokemon.isPlayerOwned()) return@subscribe
+
+            broadcastSpawn(config, evt)
+            playShinySound(config, evt.entity.pokemon, evt.ctx.world, evt.ctx.position)
         }
-        config = AutoConfig.getConfigHolder(SpawnNotificationConfig::class.java)
-            .config
-
-        Registry.register(Registry.SOUND_EVENT, SHINY_SOUND_ID, SHINY_SOUND_EVENT)
-    }
-
-    fun possiblyBroadcastSpawn(pokemonEntity: PokemonEntity, level: ServerLevel, blockPos: BlockPos) {
-        val pokemon = pokemonEntity.pokemon
-        if (pokemon.isPlayerOwned()) return
-
-        broadcastSpawn(config, pokemonEntity, level, blockPos)
-        playShinySound(config, pokemonEntity, level, blockPos)
+        CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
+            val pokemon = evt.pokemonEntity
+            playShinySound(config, evt.pokemon, evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
+        }
     }
 
     private fun broadcastSpawn(
         config: SpawnNotificationConfig,
-        pokemonEntity: PokemonEntity,
-        level: ServerLevel,
-        pos: BlockPos
+        evt: SpawnEvent<PokemonEntity>
     ) {
-        val pokemon = pokemonEntity.pokemon
-        val pokemonName = pokemon.displayName
+        val pokemon = evt.entity.pokemon
+        val pokemonName = pokemon.getDisplayName()
 
         val message = when {
             config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "spawnnotification.notification.both"
@@ -65,10 +54,11 @@ object SpawnNotification : ModInitializer {
             else -> return
         }
 
-        var messageComponent = Component.translatable(message, pokemonName)
+        var messageComponent = Text.translatable(message, pokemonName)
+        val pos = evt.ctx.position
         if (config.broadcastCoords) {
             messageComponent = messageComponent.append(
-                Component.translatable(
+                Text.translatable(
                     "spawnnotification.notification.coords",
                     pos.x,
                     pos.y,
@@ -76,45 +66,29 @@ object SpawnNotification : ModInitializer {
                 )
             )
         }
+        val level = evt.ctx.world
         if (config.broadcastBiome) {
-            val biomeHolder = level.getBiome(pos)
-            val biomeBaseKey =
-                "biome." + level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).getKey(biomeHolder.value())
-                    ?.toLanguageKey()
             messageComponent = messageComponent.append(
-                Component.translatable(
+                Text.translatable(
                     "spawnnotification.notification.biome",
-                    Component.translatable(biomeBaseKey)
+                    Text.translatable("biome.${evt.ctx.biomeName.toTranslationKey()}")
                 )
             )
         }
 
-        level.players().forEach { player ->
-            player.sendSystemMessage(messageComponent)
+        level.players.forEach { player ->
+            player.sendMessage(messageComponent)
         }
-    }
-
-    fun possiblyPlayShinySound(
-        pokemonEntity: PokemonEntity,
-        level: ServerLevel,
-        blockPos: BlockPos
-    ) {
-        if (!config.playShinySoundPlayer || !pokemonEntity.pokemon.shiny) {
-            return
-        }
-        playShinySound(config, pokemonEntity, level, blockPos)
     }
 
     private fun playShinySound(
         cachedConfig: SpawnNotificationConfig,
-        pokemonEntity: PokemonEntity,
-        level: ServerLevel,
-        blockPos: BlockPos
+        pokemon: Pokemon,
+        level: World,
+        pos: BlockPos
     ) {
-        val pokemon = pokemonEntity.pokemon
-
         if (cachedConfig.playShinySound && pokemon.shiny) {
-            level.playSoundServer(Vec3.atCenterOf(blockPos), SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
+            level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
         }
     }
 }
