@@ -1,8 +1,8 @@
 {
-  "spawnnotification.notification.both": "Shiny Legendary %d spawned",
-  "spawnnotification.notification.shiny": "Shiny %d spawned",
-  "spawnnotification.notification.legendary": "Legendary %d spawned",
-  "spawnnotification.notification.coords": " at (%d, %d, %d)",
-  "spawnnotification.notification.biome": " in a %d biome",
-  "spawnnotification.shinysoundsubtitle": "Shiny spawned"
+  "spawn_notification.notification.both": "Shiny Legendary %d spawned",
+  "spawn_notification.notification.shiny": "Shiny %d spawned",
+  "spawn_notification.notification.legendary": "Legendary %d spawned",
+  "spawn_notification.notification.coords": " at (%d, %d, %d)",
+  "spawn_notification.notification.biome": " in a %d biome",
+  "spawn_notification.shinysoundsubtitle": "Shiny spawned"
 }

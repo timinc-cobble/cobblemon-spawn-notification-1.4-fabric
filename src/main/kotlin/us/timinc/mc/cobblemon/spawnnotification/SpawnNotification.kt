@@ -32,11 +32,14 @@ object SpawnNotification : ModInitializer {
             if (pokemon.isPlayerOwned()) return@subscribe
 
             broadcastSpawn(config, evt)
-            playShinySound(config, evt.entity.pokemon, evt.ctx.world, evt.ctx.position)
+            if (config.playShinySound && pokemon.shiny) {
+                playShinySound(evt.entity.pokemon, evt.ctx.world, evt.ctx.position)
+            }
         }
         CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
-            val pokemon = evt.pokemonEntity
-            playShinySound(config, evt.pokemon, evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
+            if (config.playShinySoundPlayer && evt.pokemon.shiny) {
+                playShinySound(evt.pokemon, evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
+            }
         }
     }
 
@@ -48,9 +51,9 @@ object SpawnNotification : ModInitializer {
         val pokemonName = pokemon.getDisplayName()
 
         val message = when {
-            config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "spawnnotification.notification.both"
-            config.broadcastLegendary && pokemon.isLegendary() -> "spawnnotification.notification.legendary"
-            config.broadcastShiny && pokemon.shiny -> "spawnnotification.notification.shiny"
+            config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "$MOD_ID.notification.both"
+            config.broadcastLegendary && pokemon.isLegendary() -> "$MOD_ID.notification.legendary"
+            config.broadcastShiny && pokemon.shiny -> "$MOD_ID.notification.shiny"
             else -> return
         }
 
@@ -59,7 +62,7 @@ object SpawnNotification : ModInitializer {
         if (config.broadcastCoords) {
             messageComponent = messageComponent.append(
                 Text.translatable(
-                    "spawnnotification.notification.coords",
+                    "$MOD_ID.notification.coords",
                     pos.x,
                     pos.y,
                     pos.z
@@ -70,7 +73,7 @@ object SpawnNotification : ModInitializer {
         if (config.broadcastBiome) {
             messageComponent = messageComponent.append(
                 Text.translatable(
-                    "spawnnotification.notification.biome",
+                    "$MOD_ID.notification.biome",
                     Text.translatable("biome.${evt.ctx.biomeName.toTranslationKey()}")
                 )
             )
@@ -82,13 +85,10 @@ object SpawnNotification : ModInitializer {
     }
 
     private fun playShinySound(
-        cachedConfig: SpawnNotificationConfig,
         pokemon: Pokemon,
         level: World,
         pos: BlockPos
     ) {
-        if (cachedConfig.playShinySound && pokemon.shiny) {
-            level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
-        }
+        level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
     }
 }
