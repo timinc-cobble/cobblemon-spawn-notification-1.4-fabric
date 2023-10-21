@@ -4,5 +4,9 @@
   "spawn_notification.notification.legendary": "Legendary %d spawned",
   "spawn_notification.notification.coords": " at (%d, %d, %d)",
   "spawn_notification.notification.biome": " in a %d biome",
-  "spawn_notification.shinysoundsubtitle": "Shiny spawned"
+  "spawn_notification.notification.dimension": " in %d",
+  "spawn_notification.shinysoundsubtitle": "Shiny spawned",
+  "dimension.minecraft.overworld": "the Overworld",
+  "dimension.minecraft.the_nether": "the Nether",
+  "dimension.minecraft.the_end": "The End"
 }

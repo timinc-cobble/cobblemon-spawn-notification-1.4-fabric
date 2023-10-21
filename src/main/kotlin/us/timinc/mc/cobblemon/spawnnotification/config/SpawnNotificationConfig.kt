@@ -19,6 +19,7 @@ class SpawnNotificationConfig {
     val playShinySound = true
 //    @Comment("Whether or not to play the PLA shiny sound when a player sends out a shiny")
     val playShinySoundPlayer = false
+    val announceCrossDimensions = false
 
     class Builder {
         companion object {
