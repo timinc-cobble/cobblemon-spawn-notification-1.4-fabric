@@ -33,12 +33,12 @@ object SpawnNotification : ModInitializer {
 
             broadcastSpawn(config, evt)
             if (config.playShinySound && pokemon.shiny) {
-                playShinySound(evt.entity.pokemon, evt.ctx.world, evt.ctx.position)
+                playShinySound(evt.ctx.world, evt.ctx.position)
             }
         }
         CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
             if (config.playShinySoundPlayer && evt.pokemon.shiny) {
-                playShinySound(evt.pokemon, evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
+                playShinySound(evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
             }
         }
     }
@@ -79,13 +79,25 @@ object SpawnNotification : ModInitializer {
             )
         }
 
-        level.players.forEach { player ->
-            player.sendMessage(messageComponent)
+        if (config.announceCrossDimensions) {
+            messageComponent = messageComponent.append(Text.translatable(
+                "$MOD_ID.notification.dimension",
+                Text.translatable("dimension.${level.dimensionKey.value.toTranslationKey()}")
+            ))
+
+            evt.entity.server!!.worlds.forEach { world ->
+                world.players.forEach { player ->
+                    player.sendMessage(messageComponent)
+                }
+            }
+        } else {
+            level.players.forEach { player ->
+                player.sendMessage(messageComponent)
+            }
         }
     }
 
     private fun playShinySound(
-        pokemon: Pokemon,
         level: World,
         pos: BlockPos
     ) {
