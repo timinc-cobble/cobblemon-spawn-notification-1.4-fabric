@@ -6,6 +6,7 @@ import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
 import net.fabricmc.api.ModInitializer
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
@@ -13,6 +14,7 @@ import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
+import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
@@ -31,7 +33,7 @@ object SpawnNotification : ModInitializer {
             val pokemon = evt.entity.pokemon
             if (pokemon.isPlayerOwned()) return@subscribe
 
-            broadcastSpawn(config, evt)
+            broadcastSpawn(evt)
             if (config.playShinySound && pokemon.shiny) {
                 playShinySound(evt.ctx.world, evt.ctx.position)
             }
@@ -41,10 +43,32 @@ object SpawnNotification : ModInitializer {
                 playShinySound(evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
             }
         }
+        CobblemonEvents.POKEMON_CAPTURED.subscribe { evt ->
+            broadcastDespawn(evt.pokemon, DespawnReason.CAPTURED)
+        }
+        CobblemonEvents.POKEMON_FAINTED.subscribe { evt ->
+            broadcastDespawn(evt.pokemon, DespawnReason.FAINTED)
+        }
+        ServerEntityEvents.ENTITY_UNLOAD.register{ entity, _ ->
+            if (entity !is PokemonEntity) return@register
+
+            broadcastDespawn(entity.pokemon, DespawnReason.DESPAWNED)
+        }
+    }
+
+    private fun broadcastDespawn(
+        pokemon: Pokemon,
+        reason: DespawnReason
+    ) {
+        if (config.broadcastDespawns && (pokemon.shiny || pokemon.isLegendary())) {
+            Broadcast.broadcastMessage(Text.translatable(
+                "$MOD_ID.notification.${reason.translationKey}",
+                pokemon.getDisplayName()
+            ))
+        }
     }
 
     private fun broadcastSpawn(
-        config: SpawnNotificationConfig,
         evt: SpawnEvent<PokemonEntity>
     ) {
         val pokemon = evt.entity.pokemon
@@ -85,15 +109,9 @@ object SpawnNotification : ModInitializer {
                 Text.translatable("dimension.${level.dimensionKey.value.toTranslationKey()}")
             ))
 
-            evt.entity.server!!.worlds.forEach { world ->
-                world.players.forEach { player ->
-                    player.sendMessage(messageComponent)
-                }
-            }
+            Broadcast.broadcastMessage(messageComponent)
         } else {
-            level.players.forEach { player ->
-                player.sendMessage(messageComponent)
-            }
+            Broadcast.broadcastMessage(level, messageComponent)
         }
     }
 
