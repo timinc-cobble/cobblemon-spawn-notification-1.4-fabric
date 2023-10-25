@@ -5,19 +5,16 @@ import com.cobblemon.mod.common.api.events.entity.SpawnEvent
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
-import com.cobblemon.mod.common.util.server
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
-import net.fabricmc.fabric.api.event.player.UseEntityCallback
-import net.minecraft.entity.passive.HorseEntity
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
-import net.minecraft.util.ActionResult
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
+import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
@@ -64,16 +61,10 @@ object SpawnNotification : ModInitializer {
         reason: DespawnReason
     ) {
         if (config.broadcastDespawns && (pokemon.shiny || pokemon.isLegendary())) {
-            server()?.playerManager
-                ?.playerList
-                ?.forEach { player ->
-                    player.sendMessage(
-                        Text.translatable(
-                            "$MOD_ID.notification.${reason.translationKey}",
-                            pokemon.getDisplayName()
-                        )
-                    )
-                }
+            Broadcast.broadcastMessage(Text.translatable(
+                "$MOD_ID.notification.${reason.translationKey}",
+                pokemon.getDisplayName()
+            ))
         }
     }
 
@@ -118,15 +109,9 @@ object SpawnNotification : ModInitializer {
                 Text.translatable("dimension.${level.dimensionKey.value.toTranslationKey()}")
             ))
 
-            server()?.playerManager
-                ?.playerList
-                ?.forEach { player ->
-                    player.sendMessage(messageComponent)
-                }
+            Broadcast.broadcastMessage(messageComponent)
         } else {
-            level.players.forEach { player ->
-                player.sendMessage(messageComponent)
-            }
+            Broadcast.broadcastMessage(level, messageComponent)
         }
     }
 
