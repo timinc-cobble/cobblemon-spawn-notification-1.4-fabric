@@ -5,16 +5,23 @@ import com.cobblemon.mod.common.api.events.entity.SpawnEvent
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
+import com.cobblemon.mod.common.util.toBlockPos
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
+import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
+import org.apache.logging.log4j.LogManager
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
+import us.timinc.mc.cobblemon.spawnnotification.util.PlayerUtil
+
+import net.minecraft.client.sound.SoundManager
+import net.minecraft.entity.player.PlayerEntity
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
@@ -35,7 +42,14 @@ object SpawnNotification : ModInitializer {
 
             broadcastSpawn(evt)
             if (config.playShinySound && pokemon.shiny) {
-                playShinySound(evt.ctx.world, evt.ctx.position)
+                if (config.limitRange) {
+                    val range = config.broadcastRange
+                    val pos = evt.ctx.position
+                    val players = PlayerUtil.getPlayersInRange(pos, range)
+                    players.forEach { playShinySoundClient(it)}
+                } else {
+                    playShinySound(evt.ctx.world, evt.ctx.position)
+                }
             }
         }
         CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
@@ -110,6 +124,13 @@ object SpawnNotification : ModInitializer {
             ))
 
             Broadcast.broadcastMessage(messageComponent)
+        }
+
+        // if config.limitedRange && player.inRange()?
+        if (config.limitRange) {
+            val range = config.broadcastRange // config.range
+            val players: List<ServerPlayerEntity> = PlayerUtil.getPlayersInRange(pos, range)
+            Broadcast.broadcastMessage(players, messageComponent)
         } else {
             Broadcast.broadcastMessage(level, messageComponent)
         }
@@ -120,5 +141,10 @@ object SpawnNotification : ModInitializer {
         pos: BlockPos
     ) {
         level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
+    }
+
+    private fun playShinySoundClient(player: PlayerEntity
+    ) {
+        player.playSound(SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
     }
 }

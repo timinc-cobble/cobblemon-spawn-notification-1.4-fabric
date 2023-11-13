@@ -22,6 +22,14 @@ class SpawnNotificationConfig {
     val announceCrossDimensions = false
     val broadcastDespawns = false
 
+    val limitRange = true
+    val broadcastRange: Int = 16
+
+    // TODO: implement player limit
+    // Sort allPlayers by distance then only do up to X times
+    // Set to -1 for no limit
+//    val playerLimit: Int = -1
+
     class Builder {
         companion object {
             fun load() : SpawnNotificationConfig {
