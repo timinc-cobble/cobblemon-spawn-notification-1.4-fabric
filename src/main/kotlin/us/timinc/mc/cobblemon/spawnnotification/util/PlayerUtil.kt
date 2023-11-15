@@ -1,6 +1,5 @@
 package us.timinc.mc.cobblemon.spawnnotification.util
 
-import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 import com.cobblemon.mod.common.util.server
 import net.minecraft.registry.RegistryKey
 import net.minecraft.server.network.ServerPlayerEntity
@@ -9,18 +8,17 @@ import net.minecraft.world.dimension.DimensionType
 import kotlin.math.sqrt
 
 object PlayerUtil {
-    private lateinit var config: SpawnNotificationConfig
-
     fun getValidPlayers(
         pos: BlockPos,
         range: Int,
-        dimensionKey: RegistryKey<DimensionType>
+        dimensionKey: RegistryKey<DimensionType>,
+        playerLimit: Int
     ): List<ServerPlayerEntity> {
         var playersInRange = getPlayersInRange(pos, range, dimensionKey)
 
-        if (config.playerLimit > 0) {
+        if (playerLimit > 0) {
             playersInRange = playersInRange.sortedBy { sqrt(pos.getSquaredDistance(it.pos)) }
-            playersInRange = playersInRange.take(config.playerLimit)
+            playersInRange = playersInRange.take(playerLimit)
         }
 
         return playersInRange
