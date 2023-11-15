@@ -8,30 +8,37 @@ import net.minecraft.world.dimension.DimensionType
 import kotlin.math.sqrt
 
 object PlayerUtil {
+    /**
+     * Get a list of valid players.
+     *
+     * @param pos The center to block to search from.
+     * @param range The distance (in block radius) to search out to.
+     * @param dimensionKey The dimension to search in.
+     * @param playerLimit The maximum number of players to accept (prioritized by least distance).
+     *
+     * @return The filtered list of players.
+     */
     fun getValidPlayers(
-        pos: BlockPos,
-        range: Int,
-        dimensionKey: RegistryKey<DimensionType>,
-        playerLimit: Int
+        pos: BlockPos, range: Int, dimensionKey: RegistryKey<DimensionType>, playerLimit: Int
     ): List<ServerPlayerEntity> {
-        var playersInRange = getPlayersInRange(pos, range, dimensionKey)
-
-        if (playerLimit > 0) {
-            playersInRange = playersInRange.sortedBy { sqrt(pos.getSquaredDistance(it.pos)) }
-            playersInRange = playersInRange.take(playerLimit)
-        }
-
-        return playersInRange
+        return getValidPlayers(pos, range, dimensionKey).sortedBy { sqrt(pos.getSquaredDistance(it.pos)) }
+            .take(playerLimit)
     }
 
-    fun getPlayersInRange(
-        pos: BlockPos,
-        range: Int,
-        dimensionKey: RegistryKey<DimensionType>
+    /**
+     * Get a list of valid players.
+     *
+     * @param pos The center to block to search from.
+     * @param range The distance (in block radius) to search out to.
+     * @param dimensionKey The dimension to search in.
+     *
+     * @return The filtered list of players.
+     */
+    fun getValidPlayers(
+        pos: BlockPos, range: Int, dimensionKey: RegistryKey<DimensionType>
     ): List<ServerPlayerEntity> {
         val serverInstance = server() ?: return emptyList()
-        val allPlayers = serverInstance.playerManager.playerList
 
-        return allPlayers.filter { sqrt(pos.getSquaredDistance(it.pos)) <= range && dimensionKey == it.world.dimensionKey }
+        return serverInstance.playerManager.playerList.filter { sqrt(pos.getSquaredDistance(it.pos)) <= range && dimensionKey == it.world.dimensionKey }
     }
 }
