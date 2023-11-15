@@ -11,17 +11,29 @@ import kotlin.math.sqrt
 object PlayerUtil {
     private lateinit var config: SpawnNotificationConfig
 
-    fun getPlayersInRange(pos: BlockPos, range: Int, dimensionKey: RegistryKey<DimensionType>): List<ServerPlayerEntity> {
-        val serverInstance = server() ?: return emptyList()
-        val allPlayers = serverInstance.playerManager.playerList
-
-        var playersInRange = allPlayers.filter { sqrt(pos.getSquaredDistance(it.pos)) <= range && dimensionKey == it.world.dimensionKey}
-        playersInRange = playersInRange.sortedBy { sqrt(pos.getSquaredDistance(it.pos)) }
+    fun getValidPlayers(
+        pos: BlockPos,
+        range: Int,
+        dimensionKey: RegistryKey<DimensionType>
+    ): List<ServerPlayerEntity> {
+        var playersInRange = getPlayersInRange(pos, range, dimensionKey)
 
         if (config.playerLimit > 0) {
+            playersInRange = playersInRange.sortedBy { sqrt(pos.getSquaredDistance(it.pos)) }
             playersInRange = playersInRange.take(config.playerLimit)
         }
 
         return playersInRange
+    }
+
+    fun getPlayersInRange(
+        pos: BlockPos,
+        range: Int,
+        dimensionKey: RegistryKey<DimensionType>
+    ): List<ServerPlayerEntity> {
+        val serverInstance = server() ?: return emptyList()
+        val allPlayers = serverInstance.playerManager.playerList
+
+        return allPlayers.filter { sqrt(pos.getSquaredDistance(it.pos)) <= range && dimensionKey == it.world.dimensionKey }
     }
 }
