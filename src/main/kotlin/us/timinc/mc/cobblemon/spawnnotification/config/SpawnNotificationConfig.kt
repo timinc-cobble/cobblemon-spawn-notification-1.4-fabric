@@ -22,7 +22,6 @@ class SpawnNotificationConfig {
     val announceCrossDimensions = false
     val broadcastDespawns = false
 
-    val limitRange = true
     val broadcastRange: Int = 16
 
     // TODO: implement player limit
