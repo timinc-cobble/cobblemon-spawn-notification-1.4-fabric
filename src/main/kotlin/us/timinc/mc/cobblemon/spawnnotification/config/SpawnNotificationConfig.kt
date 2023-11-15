@@ -23,11 +23,7 @@ class SpawnNotificationConfig {
     val broadcastDespawns = false
 
     val broadcastRange: Int = -1
-
-    // TODO: implement player limit
-    // Sort allPlayers by distance then only do up to X times
-    // Set to -1 for no limit
-//    val playerLimit: Int = -1
+    val playerLimit: Int = -1
 
     class Builder {
         companion object {
