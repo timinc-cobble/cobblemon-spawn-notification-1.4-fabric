@@ -42,7 +42,8 @@ object SpawnNotification : ModInitializer {
                 if (config.limitRange) {
                     val range = config.broadcastRange
                     val pos = evt.ctx.position
-                    val players = PlayerUtil.getPlayersInRange(pos, range)
+                    val dimensionKey = evt.ctx.world.dimensionKey
+                    val players = PlayerUtil.getPlayersInRange(pos, range, dimensionKey)
                     players.forEach { playShinySoundClient(it)}
                 } else {
                     playShinySound(evt.ctx.world, evt.ctx.position)
@@ -126,7 +127,8 @@ object SpawnNotification : ModInitializer {
         // if config.limitedRange && player.inRange()?
         if (config.limitRange) {
             val range = config.broadcastRange // config.range
-            val players: List<ServerPlayerEntity> = PlayerUtil.getPlayersInRange(pos, range)
+            val dimensionKey = evt.ctx.world.dimensionKey
+            val players: List<ServerPlayerEntity> = PlayerUtil.getPlayersInRange(pos, range, dimensionKey)
             Broadcast.broadcastMessage(players, messageComponent)
         } else {
             Broadcast.broadcastMessage(level, messageComponent)
