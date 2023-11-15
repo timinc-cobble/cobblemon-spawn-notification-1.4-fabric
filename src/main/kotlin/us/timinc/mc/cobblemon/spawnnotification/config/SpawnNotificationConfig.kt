@@ -22,7 +22,7 @@ class SpawnNotificationConfig {
     val announceCrossDimensions = false
     val broadcastDespawns = false
 
-    val broadcastRange: Int = 16
+    val broadcastRange: Int = -1
 
     // TODO: implement player limit
     // Sort allPlayers by distance then only do up to X times
