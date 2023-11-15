@@ -122,13 +122,10 @@ object SpawnNotification : ModInitializer {
             ))
 
             Broadcast.broadcastMessage(messageComponent)
-        }
-
-        // if config.limitedRange && player.inRange()?
-        val broadcastRange = config.broadcastRange
-        if (broadcastRange > 0) {
+        } else if (config.broadcastRange > 0) {
             val dimensionKey = evt.ctx.world.dimensionKey
-            val players: List<ServerPlayerEntity> = PlayerUtil.getPlayersInRange(pos, broadcastRange, dimensionKey)
+            val players: List<ServerPlayerEntity> = PlayerUtil.getPlayersInRange(pos, config.broadcastRange, dimensionKey)
+
             Broadcast.broadcastMessage(players, messageComponent)
         } else {
             Broadcast.broadcastMessage(level, messageComponent)
