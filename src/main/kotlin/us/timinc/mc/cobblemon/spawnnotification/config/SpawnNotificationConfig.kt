@@ -22,6 +22,9 @@ class SpawnNotificationConfig {
     val announceCrossDimensions = false
     val broadcastDespawns = false
 
+    val broadcastRange: Int = -1
+    val playerLimit: Int = -1
+
     class Builder {
         companion object {
             fun load() : SpawnNotificationConfig {

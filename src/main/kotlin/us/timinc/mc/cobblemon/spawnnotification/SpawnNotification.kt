@@ -7,6 +7,8 @@ import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
+import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
@@ -15,6 +17,8 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
+import us.timinc.mc.cobblemon.spawnnotification.util.PlayerUtil
+
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
@@ -35,7 +39,16 @@ object SpawnNotification : ModInitializer {
 
             broadcastSpawn(evt)
             if (config.playShinySound && pokemon.shiny) {
-                playShinySound(evt.ctx.world, evt.ctx.position)
+                val broadcastRange = config.broadcastRange
+                if (broadcastRange > 0) {
+                    val pos = evt.ctx.position
+                    val dimensionKey = evt.ctx.world.dimensionKey
+                    val playerLimit = config.playerLimit
+                    val players = PlayerUtil.getValidPlayers(pos, broadcastRange, dimensionKey, playerLimit)
+                    players.forEach { playShinySoundClient(it)}
+                } else {
+                    playShinySound(evt.ctx.world, evt.ctx.position)
+                }
             }
         }
         CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
@@ -110,6 +123,12 @@ object SpawnNotification : ModInitializer {
             ))
 
             Broadcast.broadcastMessage(messageComponent)
+        } else if (config.broadcastRange > 0) {
+            val dimensionKey = evt.ctx.world.dimensionKey
+            val playerLimit = config.playerLimit
+            val players: List<ServerPlayerEntity> = PlayerUtil.getValidPlayers(pos, config.broadcastRange, dimensionKey, playerLimit)
+
+            Broadcast.broadcastMessage(players, messageComponent)
         } else {
             Broadcast.broadcastMessage(level, messageComponent)
         }
@@ -120,5 +139,10 @@ object SpawnNotification : ModInitializer {
         pos: BlockPos
     ) {
         level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
+    }
+
+    private fun playShinySoundClient(player: PlayerEntity
+    ) {
+        player.playSound(SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
     }
 }
