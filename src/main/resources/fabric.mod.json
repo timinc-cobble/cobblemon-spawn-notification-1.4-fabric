@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cobblemon_spawn_notification",
-  "version": "1.4-fabric-1.2.0",
+  "version": "1.4-fabric-1.2.1",
   "name": "Cobblemon Spawn Notification",
   "description": "When a Legendary and/or Shiny Pokemon shows up, a message is broadcast to all players on the server.",
   "authors": [
