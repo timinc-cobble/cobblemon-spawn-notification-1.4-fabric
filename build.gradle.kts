@@ -1,51 +1,50 @@
 plugins {
     id("java")
-    id("dev.architectury.loom") version("0.12.0-SNAPSHOT")
-    id("architectury-plugin") version("3.4-SNAPSHOT")
-    kotlin("jvm") version ("1.7.10")
+    id("fabric-loom") version("1.4-SNAPSHOT")
+    kotlin("jvm") version ("1.8.20")
 }
 
-group = "us.timinc.mc.cobblemon.spawnnotification"
-version = "1.4.0"
-
-architectury {
-    platformSetupLoomIde()
-    fabric()
-}
-
-loom {
-    silentMojangMappingsLicense()
-
-    mixin {
-        defaultRefmapName.set("mixins.${project.name}.refmap.json")
-    }
-}
+group = property("maven_group")!!
+version = property("mod_version")!!
 
 repositories {
+    mavenLocal()
     mavenCentral()
-    maven(url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/")
+    maven("https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/")
     maven("https://maven.impactdev.net/repository/development/")
-    maven(url = uri("https://maven.shedaniel.me/"))
-    maven( url = "https://maven.terraformersmc.com/releases/" )
+    maven("https://api.modrinth.com/maven")
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:1.19.2")
-    mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:0.14.14")
+    minecraft("com.mojang:minecraft:${property("minecraft_version")}")
+    mappings("net.fabricmc:yarn:${property("yarn_mappings")}")
+    modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
 
-    modImplementation("net.fabricmc:fabric-language-kotlin:1.9.3+kotlin.1.8.20")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:0.75.1+1.19.2")
-    modImplementation(fabricApi.module("fabric-command-api-v2", "0.75.1+1.19.2"))
-    modImplementation("dev.architectury", "architectury-fabric", "6.5.69")
-    modCompileOnly("com.cobblemon:mod:1.3.1+1.19.2-SNAPSHOT")
-    modRuntimeOnly("com.cobblemon:fabric:1.3.1+1.19.2-SNAPSHOT")
+    // Fabric API
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
-    modApi("me.shedaniel.cloth:cloth-config-fabric:8.3.103")
+    // Fabric Kotlin
+    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+
+    // Cobblemon
+    modImplementation("com.cobblemon:fabric:${property("cobblemon_version")}")
+    //modImplementation("maven.modrinth:cobblemon-counter:${property("counter_version")}")
 }
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+tasks {
+    processResources {
+        inputs.property("version", project.version)
+
+        filesMatching("fabric.mod.json") {
+            expand(mutableMapOf("version" to project.version))
+        }
+    }
+
+    jar {
+        from("LICENSE")
+    }
+
+    compileKotlin {
+        kotlinOptions.jvmTarget = "17"
+    }
 }

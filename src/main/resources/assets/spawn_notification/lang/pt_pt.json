@@ -1,0 +1,8 @@
+{
+  "spawn_notification.notification.both": "Um %d Lendário Shiny apareceu",
+  "spawn_notification.notification.shiny": "Um %d Shiny apareceu ",
+  "spawn_notification.notification.legendary": "Um %d Lendário apareceu",
+  "spawn_notification.notification.coords": " em (%d, %d, %d)",
+  "spawn_notification.notification.biome": " no bioma %d",
+  "spawn_notification.shinysoundsubtitle": "Um Shiny apareceu"
+}

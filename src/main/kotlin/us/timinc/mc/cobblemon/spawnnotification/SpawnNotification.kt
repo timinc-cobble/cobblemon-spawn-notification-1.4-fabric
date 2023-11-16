@@ -1,120 +1,145 @@
 package us.timinc.mc.cobblemon.spawnnotification
 
+import com.cobblemon.mod.common.api.events.CobblemonEvents
+import com.cobblemon.mod.common.api.events.entity.SpawnEvent
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
+import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
-import me.shedaniel.autoconfig.AutoConfig
-import me.shedaniel.autoconfig.annotation.Config
-import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer
 import net.fabricmc.api.ModInitializer
-import net.minecraft.core.BlockPos
-import net.minecraft.core.Registry
-import net.minecraft.network.chat.Component
-import net.minecraft.resources.ResourceLocation
-import net.minecraft.server.level.ServerLevel
-import net.minecraft.sounds.SoundEvent
-import net.minecraft.sounds.SoundSource
-import net.minecraft.world.phys.Vec3
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
+import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.server.network.ServerPlayerEntity
+import net.minecraft.sound.SoundCategory
+import net.minecraft.sound.SoundEvent
+import net.minecraft.text.Text
+import net.minecraft.util.Identifier
+import net.minecraft.util.math.BlockPos
+import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
+import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
+import us.timinc.mc.cobblemon.spawnnotification.util.PlayerUtil
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
     private lateinit var config: SpawnNotificationConfig
 
     @JvmStatic
-    var SHINY_SOUND_ID: ResourceLocation = ResourceLocation("spawnnotification:pla_shiny")
+    var SHINY_SOUND_ID: Identifier = Identifier("$MOD_ID:pla_shiny")
 
     @JvmStatic
-    var SHINY_SOUND_EVENT: SoundEvent = SoundEvent(SHINY_SOUND_ID)
+    var SHINY_SOUND_EVENT: SoundEvent = SoundEvent.of(SHINY_SOUND_ID)
 
     override fun onInitialize() {
-        AutoConfig.register(
-            SpawnNotificationConfig::class.java
-        ) { definition: Config?, configClass: Class<SpawnNotificationConfig?>? ->
-            JanksonConfigSerializer(
-                definition,
-                configClass
-            )
-        }
-        config = AutoConfig.getConfigHolder(SpawnNotificationConfig::class.java)
-            .config
+        config = SpawnNotificationConfig.Builder.load()
 
-        Registry.register(Registry.SOUND_EVENT, SHINY_SOUND_ID, SHINY_SOUND_EVENT)
+        CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe { evt ->
+            val pokemon = evt.entity.pokemon
+            if (pokemon.isPlayerOwned()) return@subscribe
+
+            val world = evt.ctx.world
+            val pos = evt.ctx.position
+
+            broadcastSpawn(evt)
+            if (config.playShinySound && pokemon.shiny) {
+                if (config.broadcastRangeEnabled) {
+                    getValidPlayers(world, pos).forEach { playShinySoundClient(it) }
+                } else {
+                    playShinySound(world, pos)
+                }
+            }
+        }
+        CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
+            if (config.playShinySoundPlayer && evt.pokemon.shiny) {
+                playShinySound(evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
+            }
+        }
+        CobblemonEvents.POKEMON_CAPTURED.subscribe { evt ->
+            broadcastDespawn(evt.pokemon, DespawnReason.CAPTURED)
+        }
+        CobblemonEvents.POKEMON_FAINTED.subscribe { evt ->
+            broadcastDespawn(evt.pokemon, DespawnReason.FAINTED)
+        }
+        ServerEntityEvents.ENTITY_UNLOAD.register { entity, _ ->
+            if (entity !is PokemonEntity) return@register
+
+            broadcastDespawn(entity.pokemon, DespawnReason.DESPAWNED)
+        }
     }
 
-    fun possiblyBroadcastSpawn(pokemonEntity: PokemonEntity, level: ServerLevel, blockPos: BlockPos) {
-        val pokemon = pokemonEntity.pokemon
-        if (pokemon.isPlayerOwned()) return
-
-        broadcastSpawn(config, pokemonEntity, level, blockPos)
-        playShinySound(config, pokemonEntity, level, blockPos)
+    private fun broadcastDespawn(
+        pokemon: Pokemon, reason: DespawnReason
+    ) {
+        if (config.broadcastDespawns && (pokemon.shiny || pokemon.isLegendary())) {
+            Broadcast.broadcastMessage(
+                Text.translatable(
+                    "$MOD_ID.notification.${reason.translationKey}", pokemon.getDisplayName()
+                )
+            )
+        }
     }
 
     private fun broadcastSpawn(
-        config: SpawnNotificationConfig,
-        pokemonEntity: PokemonEntity,
-        level: ServerLevel,
-        pos: BlockPos
+        evt: SpawnEvent<PokemonEntity>
     ) {
-        val pokemon = pokemonEntity.pokemon
-        val pokemonName = pokemon.displayName
+        val pokemon = evt.entity.pokemon
+        val pokemonName = pokemon.getDisplayName()
 
         val message = when {
-            config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "spawnnotification.notification.both"
-            config.broadcastLegendary && pokemon.isLegendary() -> "spawnnotification.notification.legendary"
-            config.broadcastShiny && pokemon.shiny -> "spawnnotification.notification.shiny"
+            config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "$MOD_ID.notification.both"
+            config.broadcastLegendary && pokemon.isLegendary() -> "$MOD_ID.notification.legendary"
+            config.broadcastShiny && pokemon.shiny -> "$MOD_ID.notification.shiny"
             else -> return
         }
 
-        var messageComponent = Component.translatable(message, pokemonName)
+        var messageComponent = Text.translatable(message, pokemonName)
+        val pos = evt.ctx.position
         if (config.broadcastCoords) {
             messageComponent = messageComponent.append(
-                Component.translatable(
-                    "spawnnotification.notification.coords",
-                    pos.x,
-                    pos.y,
-                    pos.z
+                Text.translatable(
+                    "$MOD_ID.notification.coords", pos.x, pos.y, pos.z
                 )
             )
         }
+        val level = evt.ctx.world
         if (config.broadcastBiome) {
-            val biomeHolder = level.getBiome(pos)
-            val biomeBaseKey =
-                "biome." + level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY).getKey(biomeHolder.value())
-                    ?.toLanguageKey()
             messageComponent = messageComponent.append(
-                Component.translatable(
-                    "spawnnotification.notification.biome",
-                    Component.translatable(biomeBaseKey)
+                Text.translatable(
+                    "$MOD_ID.notification.biome", Text.translatable("biome.${evt.ctx.biomeName.toTranslationKey()}")
                 )
             )
         }
 
-        level.players().forEach { player ->
-            player.sendSystemMessage(messageComponent)
+        if (config.announceCrossDimensions) {
+            messageComponent = messageComponent.append(
+                Text.translatable(
+                    "$MOD_ID.notification.dimension",
+                    Text.translatable("dimension.${level.dimensionKey.value.toTranslationKey()}")
+                )
+            )
+
+            Broadcast.broadcastMessage(messageComponent)
+        } else if (config.broadcastRangeEnabled) {
+            Broadcast.broadcastMessage(getValidPlayers(level, pos), messageComponent)
+        } else {
+            Broadcast.broadcastMessage(level, messageComponent)
         }
     }
 
-    fun possiblyPlayShinySound(
-        pokemonEntity: PokemonEntity,
-        level: ServerLevel,
-        blockPos: BlockPos
-    ) {
-        if (!config.playShinySoundPlayer || !pokemonEntity.pokemon.shiny) {
-            return
-        }
-        playShinySound(config, pokemonEntity, level, blockPos)
+    private fun getValidPlayers(level: World, pos: BlockPos): List<ServerPlayerEntity> {
+        return if (config.playerLimitEnabled) PlayerUtil.getValidPlayers(
+            pos, config.broadcastRange, level.dimensionKey, config.playerLimit
+        ) else PlayerUtil.getValidPlayers(pos, config.broadcastRange, level.dimensionKey)
     }
 
     private fun playShinySound(
-        cachedConfig: SpawnNotificationConfig,
-        pokemonEntity: PokemonEntity,
-        level: ServerLevel,
-        blockPos: BlockPos
+        level: World, pos: BlockPos
     ) {
-        val pokemon = pokemonEntity.pokemon
+        level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
+    }
 
-        if (cachedConfig.playShinySound && pokemon.shiny) {
-            level.playSoundServer(Vec3.atCenterOf(blockPos), SHINY_SOUND_EVENT, SoundSource.NEUTRAL, 10f, 1f)
-        }
+    private fun playShinySoundClient(
+        player: PlayerEntity
+    ) {
+        player.playSound(SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
     }
 }
