@@ -49,9 +49,10 @@ object SpawnNotification : ModInitializer {
             }
         }
         CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
-            if (config.playShinySoundPlayer && evt.pokemon.shiny) {
-                playShinySound(evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
-            }
+            if (!config.playShinySoundPlayer) return@subscribe
+            if (!evt.pokemon.shiny) return@subscribe
+
+            playShinySound(evt.pokemonEntity.world, evt.pokemonEntity.blockPos)
         }
         CobblemonEvents.POKEMON_CAPTURED.subscribe { evt ->
             broadcastDespawn(evt.pokemon, DespawnReason.CAPTURED)
@@ -69,13 +70,15 @@ object SpawnNotification : ModInitializer {
     private fun broadcastDespawn(
         pokemon: Pokemon, reason: DespawnReason
     ) {
-        if (config.broadcastDespawns && (pokemon.shiny || pokemon.isLegendary())) {
-            Broadcast.broadcastMessage(
-                Text.translatable(
-                    "$MOD_ID.notification.${reason.translationKey}", pokemon.getDisplayName()
-                )
+        if (!config.broadcastDespawns) return
+        if (pokemon.isPlayerOwned()) return
+        if (!(pokemon.shiny || pokemon.isLegendary())) return
+
+        Broadcast.broadcastMessage(
+            Text.translatable(
+                "$MOD_ID.notification.${reason.translationKey}", pokemon.getDisplayName()
             )
-        }
+        )
     }
 
     private fun broadcastSpawn(
