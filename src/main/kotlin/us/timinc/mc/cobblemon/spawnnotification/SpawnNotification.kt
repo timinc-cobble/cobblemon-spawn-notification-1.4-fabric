@@ -7,6 +7,8 @@ import com.cobblemon.mod.common.pokemon.Pokemon
 import com.cobblemon.mod.common.util.playSoundServer
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
+import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.sound.SoundCategory
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
@@ -15,6 +17,7 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
+import us.timinc.mc.cobblemon.spawnnotification.util.PlayerUtil
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
@@ -33,9 +36,16 @@ object SpawnNotification : ModInitializer {
             val pokemon = evt.entity.pokemon
             if (pokemon.isPlayerOwned()) return@subscribe
 
+            val world = evt.ctx.world
+            val pos = evt.ctx.position
+
             broadcastSpawn(evt)
             if (config.playShinySound && pokemon.shiny) {
-                playShinySound(evt.ctx.world, evt.ctx.position)
+                if (config.broadcastRangeEnabled) {
+                    getValidPlayers(world, pos).forEach { playShinySoundClient(it) }
+                } else {
+                    playShinySound(world, pos)
+                }
             }
         }
         CobblemonEvents.POKEMON_SENT_POST.subscribe { evt ->
@@ -49,7 +59,7 @@ object SpawnNotification : ModInitializer {
         CobblemonEvents.POKEMON_FAINTED.subscribe { evt ->
             broadcastDespawn(evt.pokemon, DespawnReason.FAINTED)
         }
-        ServerEntityEvents.ENTITY_UNLOAD.register{ entity, _ ->
+        ServerEntityEvents.ENTITY_UNLOAD.register { entity, _ ->
             if (entity !is PokemonEntity) return@register
 
             broadcastDespawn(entity.pokemon, DespawnReason.DESPAWNED)
@@ -57,14 +67,14 @@ object SpawnNotification : ModInitializer {
     }
 
     private fun broadcastDespawn(
-        pokemon: Pokemon,
-        reason: DespawnReason
+        pokemon: Pokemon, reason: DespawnReason
     ) {
         if (config.broadcastDespawns && (pokemon.shiny || pokemon.isLegendary())) {
-            Broadcast.broadcastMessage(Text.translatable(
-                "$MOD_ID.notification.${reason.translationKey}",
-                pokemon.getDisplayName()
-            ))
+            Broadcast.broadcastMessage(
+                Text.translatable(
+                    "$MOD_ID.notification.${reason.translationKey}", pokemon.getDisplayName()
+                )
+            )
         }
     }
 
@@ -86,10 +96,7 @@ object SpawnNotification : ModInitializer {
         if (config.broadcastCoords) {
             messageComponent = messageComponent.append(
                 Text.translatable(
-                    "$MOD_ID.notification.coords",
-                    pos.x,
-                    pos.y,
-                    pos.z
+                    "$MOD_ID.notification.coords", pos.x, pos.y, pos.z
                 )
             )
         }
@@ -97,28 +104,42 @@ object SpawnNotification : ModInitializer {
         if (config.broadcastBiome) {
             messageComponent = messageComponent.append(
                 Text.translatable(
-                    "$MOD_ID.notification.biome",
-                    Text.translatable("biome.${evt.ctx.biomeName.toTranslationKey()}")
+                    "$MOD_ID.notification.biome", Text.translatable("biome.${evt.ctx.biomeName.toTranslationKey()}")
                 )
             )
         }
 
         if (config.announceCrossDimensions) {
-            messageComponent = messageComponent.append(Text.translatable(
-                "$MOD_ID.notification.dimension",
-                Text.translatable("dimension.${level.dimensionKey.value.toTranslationKey()}")
-            ))
+            messageComponent = messageComponent.append(
+                Text.translatable(
+                    "$MOD_ID.notification.dimension",
+                    Text.translatable("dimension.${level.dimensionKey.value.toTranslationKey()}")
+                )
+            )
 
             Broadcast.broadcastMessage(messageComponent)
+        } else if (config.broadcastRangeEnabled) {
+            Broadcast.broadcastMessage(getValidPlayers(level, pos), messageComponent)
         } else {
             Broadcast.broadcastMessage(level, messageComponent)
         }
     }
 
+    private fun getValidPlayers(level: World, pos: BlockPos): List<ServerPlayerEntity> {
+        return if (config.playerLimitEnabled) PlayerUtil.getValidPlayers(
+            pos, config.broadcastRange, level.dimensionKey, config.playerLimit
+        ) else PlayerUtil.getValidPlayers(pos, config.broadcastRange, level.dimensionKey)
+    }
+
     private fun playShinySound(
-        level: World,
-        pos: BlockPos
+        level: World, pos: BlockPos
     ) {
         level.playSoundServer(pos.toCenterPos(), SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
+    }
+
+    private fun playShinySoundClient(
+        player: PlayerEntity
+    ) {
+        player.playSound(SHINY_SOUND_EVENT, SoundCategory.NEUTRAL, 10f, 1f)
     }
 }
