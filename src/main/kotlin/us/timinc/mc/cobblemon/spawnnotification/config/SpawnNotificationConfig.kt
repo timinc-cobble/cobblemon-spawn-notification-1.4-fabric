@@ -7,7 +7,6 @@ import java.io.FileReader
 import java.io.PrintWriter
 
 class SpawnNotificationConfig {
-    val broadcastLegendary = true
     val broadcastShiny = true
     val broadcastCoords = true
     val broadcastBiome = false
@@ -18,6 +17,8 @@ class SpawnNotificationConfig {
 
     val broadcastRange: Int = -1
     val playerLimit: Int = -1
+
+    val labelsForBroadcast: MutableSet<String> = mutableSetOf("legendary");
 
     @Suppress("KotlinConstantConditions")
     val broadcastRangeEnabled: Boolean
