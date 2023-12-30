@@ -17,11 +17,13 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import us.timinc.mc.cobblemon.spawnnotification.config.SpawnNotificationConfig
 import us.timinc.mc.cobblemon.spawnnotification.util.Broadcast
+import us.timinc.mc.cobblemon.spawnnotification.util.DespawnReason
 import us.timinc.mc.cobblemon.spawnnotification.util.PlayerUtil
+import java.io.ObjectInputFilter.Config
 
 object SpawnNotification : ModInitializer {
     const val MOD_ID = "spawn_notification"
-    private lateinit var config: SpawnNotificationConfig
+    private var config: SpawnNotificationConfig = SpawnNotificationConfig.Builder.load()
 
     @JvmStatic
     var SHINY_SOUND_ID: Identifier = Identifier("$MOD_ID:pla_shiny")
@@ -30,8 +32,6 @@ object SpawnNotification : ModInitializer {
     var SHINY_SOUND_EVENT: SoundEvent = SoundEvent.of(SHINY_SOUND_ID)
 
     override fun onInitialize() {
-        config = SpawnNotificationConfig.Builder.load()
-
         CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe { evt ->
             val pokemon = evt.entity.pokemon
             if (pokemon.isPlayerOwned()) return@subscribe
@@ -87,9 +87,11 @@ object SpawnNotification : ModInitializer {
         val pokemon = evt.entity.pokemon
         val pokemonName = pokemon.getDisplayName()
 
+        val matchedLabel = pokemon.form.labels.firstOrNull { config.labelsForBroadcast.contains(it) }
+
         val message = when {
-            config.broadcastLegendary && config.broadcastShiny && pokemon.isLegendary() && pokemon.shiny -> "$MOD_ID.notification.both"
-            config.broadcastLegendary && pokemon.isLegendary() -> "$MOD_ID.notification.legendary"
+            matchedLabel != null && config.broadcastShiny && pokemon.shiny -> "$MOD_ID.notification.$matchedLabel.shiny"
+            matchedLabel != null -> "$MOD_ID.notification.$matchedLabel"
             config.broadcastShiny && pokemon.shiny -> "$MOD_ID.notification.shiny"
             else -> return
         }

@@ -1,5 +1,5 @@
 {
-  "spawn_notification.notification.both": "Shiny Legendary %d spawned",
+  "spawn_notification.notification.legendary.shiny": "Shiny Legendary %d spawned",
   "spawn_notification.notification.shiny": "Shiny %d spawned",
   "spawn_notification.notification.legendary": "Legendary %d spawned",
   "spawn_notification.notification.coords": " at (%d, %d, %d)",
